@@ -8,5 +8,5 @@ An Autohotkey script listens for configurable shortcut, then passes this to the 
 1. Edit `native.ahk` if you wish to update the shortcut key (default is `Mouse 5`)
 1. Compile `native.ahk` to exe with AutoHotkey
 1. Restart Firefox
-1. Install extension in Firefox
+1. Install extension in Firefox (see https://github.com/lukefor/discord_web_sys_ptt/releases/)
 1. Enable PTT in Discord and set the PTT key in Discord web settings to `Ctrl+Alt+Shift+P`.
