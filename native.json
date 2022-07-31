@@ -1,0 +1,7 @@
+{
+  "name": "discord_web_sys_ptt_native",
+  "description": "",
+  "path": "native.exe",
+  "type": "stdio",
+  "allowed_extensions": [ "discord_web_sys_ptt@darkimmortal.com" ]
+}

@@ -2,7 +2,11 @@
  * The default minimum number of ms that any 'PTT active' window can last.
  * @const {number}
  */
-const MIN_PTT_LENGTH_DEFAULT = 800;
+const MIN_PTT_LENGTH_DEFAULT = 100;
+
+
+console.log("hello background");
+
 
 /**
  * Runs the given callback with the tab ID for the broadcasting Discord tab, if
@@ -12,52 +16,14 @@ const MIN_PTT_LENGTH_DEFAULT = 800;
  *     broadcasting Discord tab ID.
  */
 function withBroadcastingTab(cb) {
-  chrome.storage.local.get('broadcastingTab', function(result) {
+  browser.storage.local.get('broadcastingTab', function(result) {
     if (result.broadcastingTab != null) {
       cb(result.broadcastingTab);
     }
   });
 }
 
-/**
- * Propogates the stored min PTT length, or the default (if no value has been stored).
- *
- * @param {function(number)} cb - A callback that will be run with the stored
- *     min PTT length as its argument.
- * @return {boolean} true if cb will be called asynchronously.
- */
-function sendMinPttLength(cb) {
-  chrome.storage.local.get('minPttLength', function(result) {
-    cb(result.minPttLength != null ? result.minPttLength : MIN_PTT_LENGTH_DEFAULT);
-  });
-  return true;
-}
-
-/**
- * Stores the new min PTT length and updates all popups and Discord tabs about
- * the change.
- *
- * @param {number} minPttLength - The new minimum PTT length.
- */
-function onMinPttLengthChanged(minPttLength) {
-  chrome.storage.local.set({
-    minPttLength: minPttLength,
-  });
-
-  // Send message to all popups.
-  chrome.runtime.sendMessage({
-    id: 'min_ptt_length_changed',
-    value: minPttLength,
-  });
-
-  // Send message to Discord tab.
-  withBroadcastingTab(function(id) {
-    chrome.tabs.sendMessage(id, {
-      id: 'min_ptt_length_changed',
-      value: minPttLength,
-    });
-  });
-}
+var port;
 
 /**
  * Updates extension badge when a Discord tab starts / stops broadcasting.
@@ -67,33 +33,42 @@ function onMinPttLengthChanged(minPttLength) {
  *     has started.
  */
 function onBroadcastingNotice(id, broadcasting) {
-  chrome.storage.local.get('broadcastingTab', function(result) {
+  browser.storage.local.get('broadcastingTab', function(result) {
     if (broadcasting) {
-      chrome.browserAction.setBadgeText({
+      browser.browserAction.setBadgeText({
         text: 'ON',
       });
 
-      chrome.storage.local.set({
+      browser.storage.local.set({
         broadcastingTab: id,
       });
+    
+      port = browser.runtime.connectNative("discord_web_sys_ptt_native");
+      port.onMessage.addListener((response) => {
+        console.log(response);
+        withBroadcastingTab(function(id) {
+          browser.tabs.sendMessage(id, {
+            id: 'ext_shortcut_pushed',
+          });
+        });
+      });
     } else if (result.broadcastingTab === id) {
-      chrome.browserAction.setBadgeText({
+      browser.browserAction.setBadgeText({
         text: '',
       });
 
-      chrome.storage.local.set({
+      browser.storage.local.set({
         broadcastingTab: null,
       });
+      
+      port.disconnect();
     }
   });
 }
 
 // Handle messages from Discord tabs and popups.
-chrome.runtime.onMessage.addListener(function(msg, sender, cb) {
+browser.runtime.onMessage.addListener(function(msg, sender, cb) {
   if (msg.id === 'discord_loaded' || msg.id === 'popup_loaded') {
-    return sendMinPttLength(cb);
-  } else if (msg.id === 'min_ptt_length_changed') {
-    onMinPttLengthChanged(msg.value);
     return false;
   } else if (msg.id === 'broadcasting' && sender != null &&
     sender.tab != null && sender.tab.id != null) {
@@ -102,13 +77,4 @@ chrome.runtime.onMessage.addListener(function(msg, sender, cb) {
   }
 
   return false;
-});
-
-// When extension shortcut is pressed, notify Discord tab.
-chrome.commands.onCommand.addListener(function() {
-  withBroadcastingTab(function(id) {
-    chrome.tabs.sendMessage(id, {
-      id: 'ext_shortcut_pushed',
-    });
-  });
 });
