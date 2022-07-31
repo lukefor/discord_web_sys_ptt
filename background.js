@@ -4,10 +4,6 @@
  */
 const MIN_PTT_LENGTH_DEFAULT = 100;
 
-
-console.log("hello background");
-
-
 /**
  * Runs the given callback with the tab ID for the broadcasting Discord tab, if
  * one exists.

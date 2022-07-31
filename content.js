@@ -129,11 +129,11 @@ browser.runtime.sendMessage({
 });
 
 // Never broadcasting once the user navigates away.
-window.addEventListener('unload', function() {
+window.addEventListener('beforeunload', function() {
   broadcasting = false;
   browser.runtime.sendMessage({
     id: 'broadcasting',
-    value: /*broadcasting*/ false,
+    value: broadcasting,
   });
 });
 
@@ -146,9 +146,10 @@ window.addEventListener('DOMContentLoaded', function() {
     );
 
     if (isDiscordApp) {
+      broadcasting = true;
       browser.runtime.sendMessage({
         id: 'broadcasting',
-        value: /*broadcasting*/ true,
+        value: broadcasting,
       });
 
       // Prevent this callback from being called more than necessary (since
@@ -162,3 +163,4 @@ window.addEventListener('DOMContentLoaded', function() {
     subtree: true,
   });
 });
+
